@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ForgeID — Identity Infrastructure for AI Agents</title>
+<meta name="description" content="It's not IAM with agent support. It's identity infrastructure built for agents. AuthN + AuthZ + Agent Identity. By IntelliForge AI."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Berkeley+Mono&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#05080E;
+  --bg1:#090D15;
+  --bg2:#0D1220;
+  --g:#00FFB2;
+  --g2:#00CCFF;
+  --amber:#FFBB44;
+  --text:#DDE4EF;
+  --muted:#6B7A96;
+  --border:rgba(255,255,255,0.07);
+  --card:rgba(255,255,255,0.025);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Figtree',sans-serif;overflow-x:hidden;line-height:1.6;cursor:default}
+
+/* ── NOISE TEXTURE ── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
+
+/* ── GRID ── */
+.grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,178,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,178,.018) 1px,transparent 1px);background-size:80px 80px;z-index:0;pointer-events:none}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:60px;display:flex;align-items:center;padding:0 40px;border-bottom:1px solid var(--border);background:rgba(5,8,14,.88);backdrop-filter:blur(20px)}
+.nav-left{display:flex;align-items:center;gap:10px}
+.logomark{width:28px;height:28px;background:var(--g);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:11px;color:#000;letter-spacing:.5px}
+.logotype{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;letter-spacing:-.3px}
+.logotype span{color:var(--g)}
+.nav-center{flex:1;display:flex;justify-content:center;gap:36px}
+.nav-center a{font-size:13px;color:var(--muted);text-decoration:none;transition:color .15s;letter-spacing:.2px}
+.nav-center a:hover{color:var(--text)}
+.nav-right{display:flex;align-items:center;gap:12px}
+.btn-nav{font-size:13px;font-weight:600;font-family:'Figtree',sans-serif;padding:7px 16px;border-radius:6px;cursor:pointer;border:none;transition:all .15s}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.btn-solid{background:var(--g);color:#000}
+.btn-solid:hover{opacity:.88}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 40px 80px;position:relative;z-index:1;text-align:center}
+.hero::after{content:'';position:absolute;top:20%;left:50%;transform:translateX(-50%);width:700px;height:400px;background:radial-gradient(ellipse,rgba(0,255,178,.07) 0%,transparent 70%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;font-family:'Berkeley Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;background:rgba(0,255,178,.07);color:var(--g);border:1px solid rgba(0,255,178,.2);padding:5px 14px;border-radius:3px;margin-bottom:36px}
+.hero-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--g);animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+h1{font-family:'Syne',sans-serif;font-size:clamp(48px,7vw,88px);font-weight:800;letter-spacing:-3px;line-height:.95;margin-bottom:28px;position:relative;z-index:1}
+h1 em{font-style:normal;color:var(--g)}
+.hero-contrast{font-size:clamp(15px,2vw,19px);color:var(--muted);max-width:540px;margin:0 auto 20px;line-height:1.65;position:relative;z-index:1}
+.hero-contrast strong{color:var(--text);font-weight:600}
+.hero-sub{font-size:14px;color:var(--muted);opacity:.7;margin-bottom:40px;font-family:'Berkeley Mono',monospace;letter-spacing:.5px}
+.hero-actions{display:flex;gap:14px;justify-content:center;margin-bottom:60px;flex-wrap:wrap;position:relative;z-index:1}
+.btn-hero-primary{font-family:'Figtree',sans-serif;font-weight:700;font-size:15px;padding:13px 28px;border-radius:8px;background:var(--g);color:#000;border:none;cursor:pointer;transition:all .2s;text-decoration:none}
+.btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,255,178,.2)}
+.btn-hero-secondary{font-family:'Figtree',sans-serif;font-weight:600;font-size:15px;padding:13px 28px;border-radius:8px;background:transparent;color:var(--text);border:1px solid var(--border);cursor:pointer;transition:all .2s;text-decoration:none}
+.btn-hero-secondary:hover{border-color:rgba(255,255,255,.2)}
+.hero-trust{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1}
+.trust-chip{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);font-family:'Berkeley Mono',monospace}
+.trust-chip::before{content:'✓';color:var(--g);font-size:11px}
+
+/* ── LIVE DEMO ── */
+.demo-wrap{width:100%;max-width:820px;margin:0 auto 0;position:relative;z-index:1}
+.demo-header{display:flex;align-items:center;gap:8px;margin-bottom:-1px;padding:0 20px}
+.demo-tabs{display:flex;gap:2px}
+.demo-tab{font-family:'Berkeley Mono',monospace;font-size:11px;padding:8px 14px;cursor:pointer;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;color:var(--muted);transition:all .15s;background:transparent}
+.demo-tab.active{background:var(--bg2);border-color:var(--border);color:var(--g)}
+.demo-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.demo-panel-top{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.demo-dots{display:flex;gap:6px}
+.demo-dot{width:10px;height:10px;border-radius:50%}
+.demo-file{font-family:'Berkeley Mono',monospace;font-size:11px;color:var(--muted);margin-left:auto;letter-spacing:.5px}
+.demo-code{padding:24px 28px;font-family:'Berkeley Mono',monospace;font-size:13px;line-height:2;min-height:160px}
+.c-comment{color:#3D5066}
+.c-kw{color:var(--g2)}
+.c-str{color:var(--amber)}
+.c-prop{color:var(--g)}
+.c-fn{color:#C792EA}
+.c-num{color:#F78C6C}
+.demo-output{border-top:1px solid var(--border);padding:20px 28px}
+.demo-output-label{font-family:'Berkeley Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.demo-output-label span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--g);animation:blink 1.5s infinite}
+.demo-response{background:rgba(0,255,178,.04);border:1px solid rgba(0,255,178,.12);border-radius:8px;padding:16px 20px;font-family:'Berkeley Mono',monospace;font-size:12px;line-height:1.9;color:var(--muted);cursor:pointer;transition:border-color .2s;position:relative}
+.demo-response:hover{border-color:rgba(0,255,178,.3)}
+.demo-response .token-val{color:var(--text);word-break:break-all}
+.demo-hint{font-size:11px;color:var(--muted);opacity:.5;margin-top:8px;font-family:'Berkeley Mono',monospace;text-align:center}
+.demo-try-btn{display:inline-flex;align-items:center;gap:8px;font-family:'Berkeley Mono',monospace;font-size:11px;padding:8px 16px;border-radius:6px;background:rgba(0,255,178,.08);color:var(--g);border:1px solid rgba(0,255,178,.2);cursor:pointer;transition:all .2s;margin-top:4px}
+.demo-try-btn:hover{background:rgba(0,255,178,.14)}
+.demo-try-btn.loading{opacity:.6;pointer-events:none}
+.spin{display:inline-block;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:0}
+
+/* ── LOGO BAR ── */
+.logobar{padding:40px;position:relative;z-index:1}
+.logobar-label{font-family:'Berkeley Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-align:center;margin-bottom:24px;text-transform:uppercase}
+.logobar-items{display:flex;justify-content:center;align-items:center;gap:32px;flex-wrap:wrap}
+.logobar-item{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:rgba(255,255,255,.25);letter-spacing:.5px;transition:color .2s}
+.logobar-item:hover{color:rgba(255,255,255,.5)}
+
+/* ── SECTIONS ── */
+.section{padding:100px 40px;position:relative;z-index:1}
+.section-inner{max-width:1060px;margin:0 auto}
+.section-alt{background:var(--bg1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.sec-label{font-family:'Berkeley Mono',monospace;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--g);margin-bottom:20px;display:block}
+.sec-label-bracket::before{content:'[ ';opacity:.4}
+.sec-label-bracket::after{content:' ]';opacity:.4}
+h2{font-family:'Syne',sans-serif;font-size:clamp(28px,4vw,48px);font-weight:800;letter-spacing:-1.5px;line-height:1.05;margin-bottom:16px}
+h2 em{font-style:normal;color:var(--g)}
+.sec-sub{font-size:16px;color:var(--muted);max-width:500px;line-height:1.7;margin-bottom:56px}
+
+/* ── CONTRAST SECTION ── */
+.contrast-big{font-family:'Syne',sans-serif;font-size:clamp(22px,3.5vw,40px);font-weight:800;letter-spacing:-1px;line-height:1.2;margin-bottom:16px}
+.contrast-strike{text-decoration:line-through;color:var(--muted);opacity:.5}
+.contrast-real{color:var(--g)}
+
+/* ── THREE SURFACES ── */
+.surfaces{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:12px;overflow:hidden;margin-top:40px}
+.surface{background:var(--bg1);padding:36px 32px}
+.surface-icon{font-size:24px;margin-bottom:18px}
+.surface-lbl{font-family:'Berkeley Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+.surface.a .surface-lbl{color:var(--g)}
+.surface.b .surface-lbl{color:var(--g2)}
+.surface.c .surface-lbl{color:var(--amber)}
+.surface-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:16px;letter-spacing:-.5px}
+.surface-list{list-style:none}
+.surface-list li{font-size:13.5px;color:var(--muted);padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.surface-list li:last-child{border:none}
+.surface-list li::before{content:'→';font-family:'Berkeley Mono',monospace;font-size:11px;color:var(--border);margin-top:2px;flex-shrink:0}
+
+/* ── AGENT FLOW ── */
+.agent-flow{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.flow-steps{list-style:none}
+.flow-step{display:flex;gap:20px;margin-bottom:32px;position:relative}
+.flow-step:not(:last-child)::after{content:'';position:absolute;left:16px;top:40px;width:1px;height:calc(100% - 8px);background:linear-gradient(var(--border),transparent)}
+.flow-num{width:32px;height:32px;border-radius:50%;border:1px solid rgba(0,255,178,.25);display:flex;align-items:center;justify-content:center;font-family:'Berkeley Mono',monospace;font-size:12px;color:var(--g);flex-shrink:0;background:rgba(0,255,178,.05)}
+.flow-body{}
+.flow-title{font-weight:600;margin-bottom:4px;font-size:15px}
+.flow-desc{font-size:13px;color:var(--muted);line-height:1.6}
+.chain-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;font-family:'Berkeley Mono',monospace}
+.chain-top{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:20px}
+.chain-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.chain-avatar{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.chain-info-name{font-size:12px;color:var(--text);margin-bottom:2px}
+.chain-info-meta{font-size:10px;color:var(--muted)}
+.chain-connector{margin-left:17px;border-left:1px dashed rgba(0,255,178,.2);height:14px;margin-bottom:0}
+.chain-allowed{margin-top:16px;padding:12px 14px;background:rgba(0,255,178,.04);border:1px solid rgba(0,255,178,.1);border-radius:6px}
+.chain-allowed-label{font-size:10px;color:var(--g);letter-spacing:1px;margin-bottom:6px;text-transform:uppercase}
+.chain-allowed-items{display:flex;gap:8px;flex-wrap:wrap}
+.chain-tag{font-size:10px;background:rgba(0,255,178,.1);color:var(--g);padding:3px 8px;border-radius:3px}
+.chain-denied{margin-top:8px;padding:12px 14px;background:rgba(255,70,70,.03);border:1px solid rgba(255,70,70,.1);border-radius:6px}
+.chain-denied-label{font-size:10px;color:#FF7070;letter-spacing:1px;margin-bottom:6px;text-transform:uppercase}
+.chain-denied-items{display:flex;gap:8px;flex-wrap:wrap}
+.chain-tag-red{font-size:10px;background:rgba(255,70,70,.1);color:#FF7070;padding:3px 8px;border-radius:3px}
+
+/* ── NUMBERS ── */
+.numbers{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-radius:12px;overflow:hidden}
+.num-cell{background:var(--bg1);padding:36px 28px}
+.num-val{font-family:'Syne',sans-serif;font-size:44px;font-weight:800;color:var(--g);line-height:1;margin-bottom:8px}
+.num-label{font-family:'Berkeley Mono',monospace;font-size:11px;color:var(--muted);line-height:1.5;text-transform:uppercase;letter-spacing:.5px}
+
+/* ── COMPARISON ── */
+.comp-table{width:100%;border-collapse:collapse;margin-top:40px}
+.comp-table th{font-family:'Berkeley Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:12px 16px;text-align:left;border-bottom:1px solid var(--border)}
+.comp-table td{padding:14px 16px;font-size:13.5px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--muted)}
+.comp-table td:first-child{font-weight:600;color:var(--text)}
+.comp-table tr.ours td{color:var(--g);font-weight:700}
+.comp-table tr.ours td:first-child{font-family:'Syne',sans-serif;font-size:15px}
+.tick{color:var(--g)}
+.cross{color:rgba(255,255,255,.2)}
+.warn{color:var(--amber)}
+
+/* ── PRICING ── */
+.pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
+.price-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;transition:border-color .2s}
+.price-card:hover{border-color:rgba(255,255,255,.14)}
+.price-card.featured{border-color:var(--g);background:rgba(0,255,178,.03)}
+.price-plan{font-family:'Berkeley Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+.price-plan.featured{color:var(--g)}
+.price-amt{font-family:'Syne',sans-serif;font-size:44px;font-weight:800;line-height:1;margin-bottom:4px}
+.price-card.featured .price-amt{color:var(--g)}
+.price-period{font-size:13px;color:var(--muted);margin-bottom:28px;font-family:'Berkeley Mono',monospace}
+.price-feats{list-style:none;margin-bottom:28px}
+.price-feats li{font-size:13.5px;color:var(--muted);padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:10px;align-items:flex-start}
+.price-feats li::before{content:'✓';color:var(--g);font-size:12px;flex-shrink:0;margin-top:1px}
+.price-btn{display:block;text-align:center;padding:11px;border-radius:7px;font-weight:600;font-size:14px;text-decoration:none;transition:all .2s;font-family:'Figtree',sans-serif;cursor:pointer;border:none;width:100%}
+.price-btn.primary{background:var(--g);color:#000}
+.price-btn.primary:hover{opacity:.88}
+.price-btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+.price-btn.secondary:hover{border-color:rgba(255,255,255,.2)}
+.price-overage{text-align:center;font-family:'Berkeley Mono',monospace;font-size:11px;color:var(--muted);margin-top:20px;line-height:2}
+
+/* ── CTA ── */
+.cta-section{padding:120px 40px;text-align:center;position:relative;z-index:1}
+.cta-section::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:300px;background:radial-gradient(ellipse,rgba(0,255,178,.07) 0%,transparent 70%);pointer-events:none}
+.cta-section h2{font-family:'Syne',sans-serif;font-size:clamp(36px,6vw,72px);font-weight:800;letter-spacing:-2.5px;line-height:1;margin-bottom:20px;position:relative;z-index:1}
+.cta-section p{font-size:17px;color:var(--muted);max-width:440px;margin:0 auto 40px;position:relative;z-index:1}
+.cta-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);padding:36px 40px;position:relative;z-index:1}
+.footer-inner{max-width:1060px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.footer-copy{font-family:'Berkeley Mono',monospace;font-size:11px;color:var(--muted)}
+.footer-bharat{font-family:'Berkeley Mono',monospace;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .nav-center,.nav-right .btn-ghost{display:none}
+  .agent-flow,.surfaces,.numbers{grid-template-columns:1fr}
+  .pricing{grid-template-columns:1fr}
+  .surfaces{gap:0}
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-left">
+    <div class="logomark">FID</div>
+    <span class="logotype">Forge<span>ID</span></span>
+  </div>
+  <div class="nav-center">
+    <a href="#product">Product</a>
+    <a href="#agents">For Agents</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#">Docs</a>
+    <a href="https://intelliforge.tech" target="_blank">IntelliForge AI ↗</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn-nav btn-ghost">Sign in</button>
+    <button class="btn-nav btn-solid">Get early access</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    By IntelliForge AI &nbsp;·&nbsp; Beta &nbsp;·&nbsp; Hyderabad
+  </div>
+  <h1>Identity for<br/><em>AI Agents</em></h1>
+  <p class="hero-contrast">
+    It's not IAM with agent support.<br/>
+    <strong>It's identity infrastructure built for agents</strong> — with scoped tokens, delegation chains, MCP tools, and instant revocation.
+  </p>
+  <p class="hero-sub">AuthN · AuthZ · Agent Identity · One API</p>
+  <div class="hero-actions">
+    <a href="#" class="btn-hero-primary">Start for free →</a>
+    <a href="#" class="btn-hero-secondary">Read the docs</a>
+  </div>
+  <div class="hero-trust">
+    <span class="trust-chip">No credit card required</span>
+    <span class="trust-chip">10K MAUs free forever</span>
+    <span class="trust-chip">Mumbai region · Fly.io</span>
+    <span class="trust-chip">MCP-native</span>
+  </div>
+</section>
+
+<!-- LIVE DEMO -->
+<div style="padding:0 40px 80px;position:relative;z-index:1">
+<div class="demo-wrap">
+  <div class="demo-header">
+    <div class="demo-tabs">
+      <div class="demo-tab active" onclick="switchTab(this,'ts')">TypeScript</div>
+      <div class="demo-tab" onclick="switchTab(this,'py')">Python</div>
+      <div class="demo-tab" onclick="switchTab(this,'curl')">cURL</div>
+      <div class="demo-tab" onclick="switchTab(this,'cli')">CLI</div>
+    </div>
+  </div>
+  <div class="demo-panel">
+    <div class="demo-panel-top">
+      <div class="demo-dots">
+        <div class="demo-dot" style="background:#FF6058"></div>
+        <div class="demo-dot" style="background:#FFBD2E"></div>
+        <div class="demo-dot" style="background:#28C840"></div>
+      </div>
+      <span class="demo-file" id="demo-filename">quickstart.ts</span>
+    </div>
+    <div class="demo-code" id="demo-code-block">
+      <span class="c-comment">// npm i @forgeid/sdk</span><br/>
+      <span class="c-kw">import</span> { <span class="c-prop">ForgeID</span> } <span class="c-kw">from</span> <span class="c-str">'@forgeid/sdk'</span><br/><br/>
+      <span class="c-kw">const</span> iam = <span class="c-kw">new</span> <span class="c-fn">ForgeID</span>({ <span class="c-prop">apiKey</span>: process.env.<span class="c-prop">FORGEID_KEY</span> })<br/><br/>
+      <span class="c-comment">// Spawn an AI agent with scoped capabilities</span><br/>
+      <span class="c-kw">const</span> agent = <span class="c-kw">await</span> iam.tokens.<span class="c-fn">issueAgent</span>({<br/>
+      &nbsp;&nbsp;<span class="c-prop">capabilities</span>: [<span class="c-str">'crm:write'</span>, <span class="c-str">'invoice:read'</span>],<br/>
+      &nbsp;&nbsp;<span class="c-prop">maxLifetime</span>: <span class="c-str">'2h'</span>,<br/>
+      &nbsp;&nbsp;<span class="c-prop">purpose</span>: <span class="c-str">'nightly reconciliation'</span>,<br/>
+      &nbsp;&nbsp;<span class="c-prop">model</span>: <span class="c-str">'claude-sonnet-4-20250514'</span><br/>
+      })
+    </div>
+    <div class="demo-output">
+      <div class="demo-output-label">
+        <span></span>
+        Live output — this is a real token
+      </div>
+      <div class="demo-response" id="demo-response" onclick="copyToken()">
+        <div id="demo-response-content" style="color:var(--muted);font-size:12px">
+          Click "Issue live token" to see a real JWT →
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:12px;align-items:center">
+        <button class="demo-try-btn" id="demo-btn" onclick="issueToken()">
+          ⚡ Issue live token
+        </button>
+        <span class="demo-hint" id="demo-copy-hint"></span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- LOGO BAR -->
+<div class="logobar">
+  <div class="logobar-label">AI products already running on ForgeID</div>
+  <div class="logobar-items">
+    <span class="logobar-item">GarageOS</span>
+    <span class="logobar-item">MedForge</span>
+    <span class="logobar-item">KinderOS</span>
+    <span class="logobar-item">CareerOS</span>
+    <span class="logobar-item">FacilityOS</span>
+    <span class="logobar-item">DropFlow</span>
+    <span class="logobar-item">VEKTOR</span>
+    <span class="logobar-item">ClipForge</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- CONTRAST SECTION -->
+<section class="section" id="product">
+<div class="section-inner" style="text-align:center;max-width:760px;margin:0 auto">
+  <span class="sec-label sec-label-bracket">What ForgeID is</span>
+  <div class="contrast-big">
+    <span class="contrast-strike">Not IAM with AI bolted on.</span>
+  </div>
+  <div class="contrast-big" style="margin-bottom:24px">
+    <span class="contrast-real">Identity infrastructure built from day one for agents.</span>
+  </div>
+  <p style="font-size:16px;color:var(--muted);line-height:1.7;max-width:560px;margin:0 auto">
+    Okta and Auth0 were built for humans logging in. ForgeID is built for the world where your CRM agent, your invoice bot, and your data pipeline all need provable, auditable, revocable identity.
+  </p>
+</div>
+</section>
+
+<!-- THREE SURFACES -->
+<section class="section section-alt" style="padding-top:80px;padding-bottom:80px">
+<div class="section-inner">
+  <span class="sec-label sec-label-bracket">Three surfaces</span>
+  <h2>One platform. Every way<br/>your system needs <em>identity</em>.</h2>
+  <div class="surfaces">
+    <div class="surface a">
+      <div class="surface-icon">🔌</div>
+      <div class="surface-lbl">API Friendly</div>
+      <div class="surface-title">REST + SDKs</div>
+      <ul class="surface-list">
+        <li>OpenAPI-first spec, always current</li>
+        <li>TypeScript, Python, Go, cURL clients</li>
+        <li>Machine-readable errors with doc_url</li>
+        <li>Idempotency keys on every write</li>
+        <li>Postman collection auto-generated</li>
+      </ul>
+    </div>
+    <div class="surface b">
+      <div class="surface-icon">🤖</div>
+      <div class="surface-lbl">Agent Friendly</div>
+      <div class="surface-title">MCP Server</div>
+      <ul class="surface-list">
+        <li>6 IAM tools via Model Context Protocol</li>
+        <li>iam_check_permission before every write</li>
+        <li>iam_spawn_agent_token for sub-agents</li>
+        <li>iam_get_context_block for LLM prompts</li>
+        <li>iam_revoke_self on task complete</li>
+      </ul>
+    </div>
+    <div class="surface c">
+      <div class="surface-icon">⚙️</div>
+      <div class="surface-lbl">Automation Friendly</div>
+      <div class="surface-title">Webhooks + IaC</div>
+      <ul class="surface-list">
+        <li>40+ typed webhook events, Stripe-style</li>
+        <li>Real-time SSE event stream</li>
+        <li>Terraform provider on public registry</li>
+        <li>GitHub Actions OIDC — zero stored secrets</li>
+        <li>SCIM 2.0 for enterprise provisioning</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- AGENT FLOW -->
+<section class="section" id="agents">
+<div class="section-inner">
+  <span class="sec-label sec-label-bracket">Agent identity</span>
+  <h2>Your agents need<br/><em>identity too.</em></h2>
+  <p class="sec-sub">Every agent that touches a business system needs scoped access, an audit trail, and instant revocation. ForgeID is the first IAM platform where agents are first-class principals.</p>
+  <div class="agent-flow">
+    <ul class="flow-steps">
+      <li class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-body">
+          <div class="flow-title">Human authenticates, spawns agent</div>
+          <div class="flow-desc">User logs in via passkey. App calls issueAgent() delegating a capability subset with a 2-hour lifetime and purpose string for audit.</div>
+        </div>
+      </li>
+      <li class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-body">
+          <div class="flow-title">Agent calls iam_whoami via MCP</div>
+          <div class="flow-desc">LLM connects to ForgeID MCP server. First call is always iam_whoami — agent receives its full permission boundary as structured JSON, injected into the system prompt.</div>
+        </div>
+      </li>
+      <li class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-body">
+          <div class="flow-title">Every write checked at the edge</div>
+          <div class="flow-desc">iam_check_permission runs on Vercel Edge — under 10ms, no Fly.io roundtrip. Denied actions are logged with full delegation context. Allowed actions proceed.</div>
+        </div>
+      </li>
+      <li class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-body">
+          <div class="flow-title">Task complete → iam_revoke_self</div>
+          <div class="flow-desc">Agent calls iam_revoke_self. Token killed in Redis instantly. Full chain written to audit log. Webhook fires. Dead in milliseconds.</div>
+        </div>
+      </li>
+    </ul>
+    <div class="chain-card">
+      <div class="chain-top">Delegation chain · JWT payload</div>
+      <div class="chain-row">
+        <div class="chain-avatar" style="background:rgba(0,255,178,.1)">👤</div>
+        <div>
+          <div class="chain-info-name">Girish · usr_01HZ8K...</div>
+          <div class="chain-info-meta">roles: admin · session: passkey · org: intelliforge</div>
+        </div>
+      </div>
+      <div class="chain-connector"></div>
+      <div class="chain-row">
+        <div class="chain-avatar" style="background:rgba(0,204,255,.1)">🤖</div>
+        <div>
+          <div class="chain-info-name">CRM Agent · agent_01HZ9M...</div>
+          <div class="chain-info-meta">spawned by usr_01HZ8K · ttl: 2h · tools: 50</div>
+        </div>
+      </div>
+      <div class="chain-connector"></div>
+      <div class="chain-row">
+        <div class="chain-avatar" style="background:rgba(255,187,68,.1)">⚡</div>
+        <div>
+          <div class="chain-info-name">Sub-agent · agent_01HZAM...</div>
+          <div class="chain-info-meta">spawned by agent_01HZ9M · ttl: 30m · tools: 10</div>
+        </div>
+      </div>
+      <div class="chain-allowed">
+        <div class="chain-allowed-label">Allowed</div>
+        <div class="chain-allowed-items">
+          <span class="chain-tag">crm:write</span>
+          <span class="chain-tag">invoice:read</span>
+        </div>
+      </div>
+      <div class="chain-denied">
+        <div class="chain-denied-label">Denied</div>
+        <div class="chain-denied-items">
+          <span class="chain-tag-red">billing:*</span>
+          <span class="chain-tag-red">members:delete</span>
+          <span class="chain-tag-red">admin:*</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- NUMBERS -->
+<section class="section section-alt" style="padding-top:80px;padding-bottom:80px">
+<div class="section-inner">
+  <span class="sec-label sec-label-bracket">By the numbers</span>
+  <h2>Built for <em>scale</em>.</h2>
+  <div class="numbers" style="margin-top:40px">
+    <div class="num-cell"><div class="num-val">&lt;10ms</div><div class="num-label">Token verify<br/>at Vercel Edge globally</div></div>
+    <div class="num-cell"><div class="num-val">0</div><div class="num-label">Private keys<br/>ever in a database</div></div>
+    <div class="num-cell"><div class="num-val">3</div><div class="num-label">Fly.io regions<br/>Mumbai · Singapore · US</div></div>
+    <div class="num-cell"><div class="num-val">40+</div><div class="num-label">Typed webhook<br/>events, Stripe-style</div></div>
+  </div>
+</div>
+</section>
+
+<!-- COMPETITION -->
+<section class="section">
+<div class="section-inner">
+  <span class="sec-label sec-label-bracket">Why ForgeID</span>
+  <h2>Everyone solves <em>half</em><br/>the problem.</h2>
+  <table class="comp-table">
+    <thead>
+      <tr><th>Product</th><th>AuthN</th><th>Fine-grained AuthZ</th><th>Agent Identity</th><th>MCP Server</th><th>India pricing</th></tr>
+    </thead>
+    <tbody>
+      <tr class="ours"><td>ForgeID ✦</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>Clerk / Auth0</td><td><span class="tick">✓</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td></tr>
+      <tr><td>Okta / Azure AD</td><td><span class="tick">✓</span></td><td><span class="warn">⚠</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕ $$$</span></td></tr>
+      <tr><td>WorkOS</td><td><span class="tick">✓</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td></tr>
+      <tr><td>Permit.io</td><td><span class="cross">✕</span></td><td><span class="tick">✓</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td></tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<!-- PRICING -->
+<section class="section section-alt" id="pricing" style="padding-top:80px;padding-bottom:80px">
+<div class="section-inner">
+  <span class="sec-label sec-label-bracket">Pricing</span>
+  <h2>Start free.<br/><em>Scale as you grow.</em></h2>
+  <p class="sec-sub">India-first pricing. No USD surprises. Agent tokens billed per-use on top.</p>
+  <div class="pricing">
+    <div class="price-card">
+      <div class="price-plan">Starter</div>
+      <div class="price-amt">Free</div>
+      <div class="price-period">forever</div>
+      <ul class="price-feats">
+        <li>10,000 MAUs</li>
+        <li>1 organization</li>
+        <li>Basic RBAC</li>
+        <li>50 agent tokens / month</li>
+        <li>Community support</li>
+      </ul>
+      <button class="price-btn secondary">Get started</button>
+    </div>
+    <div class="price-card featured">
+      <div class="price-plan featured">Growth · Most popular</div>
+      <div class="price-amt">₹4,999</div>
+      <div class="price-period">per month</div>
+      <ul class="price-feats">
+        <li>100,000 MAUs</li>
+        <li>Custom roles + policies</li>
+        <li>Audit logs · 90 days</li>
+        <li>Fine-grained AuthZ</li>
+        <li>5,000 agent tokens / month</li>
+        <li>Webhooks + event stream</li>
+      </ul>
+      <button class="price-btn primary">Start Growth plan</button>
+    </div>
+    <div class="price-card">
+      <div class="price-plan">Scale</div>
+      <div class="price-amt">₹19,999</div>
+      <div class="price-period">per month</div>
+      <ul class="price-feats">
+        <li>Unlimited MAUs</li>
+        <li>SSO · SAML · SCIM 2.0</li>
+        <li>SIEM export + SLA 99.9%</li>
+        <li>50,000 agent tokens / month</li>
+        <li>Terraform provider</li>
+        <li>Dedicated support</li>
+      </ul>
+      <button class="price-btn secondary">Contact us</button>
+    </div>
+  </div>
+  <p class="price-overage">
+    Agent token overage: ₹0.10 / token &nbsp;·&nbsp; SSO connection: ₹999 &nbsp;·&nbsp; Audit export: ₹499
+  </p>
+</div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>The identity layer<br/>for the <em>agentic era</em></h2>
+  <p>Join the waitlist. First 100 teams get Growth plan free for 3 months.</p>
+  <div class="cta-actions">
+    <a href="mailto:contact@intelliforge.tech?subject=ForgeID Early Access" class="btn-hero-primary">Get early access →</a>
+    <a href="https://intelliforge.tech" class="btn-hero-secondary">About IntelliForge AI</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="logomark" style="width:24px;height:24px;font-size:9px">FID</div>
+      <span class="logotype" style="font-size:15px">Forge<span>ID</span></span>
+      <span class="footer-copy" style="margin-left:8px">by IntelliForge AI</span>
+    </div>
+    <span class="footer-copy">© 2026 IntelliForge AI · Hyderabad, Telangana · contact@intelliforge.tech</span>
+    <span class="footer-bharat">🇮🇳 Bharat AI Mission Aligned</span>
+  </div>
+</footer>
+
+<script>
+// ── TAB SWITCHER ──
+const codes = {
+  ts: {
+    file: 'quickstart.ts',
+    html: `<span class="c-comment">// npm i @forgeid/sdk</span><br/>
+<span class="c-kw">import</span> { <span class="c-prop">ForgeID</span> } <span class="c-kw">from</span> <span class="c-str">'@forgeid/sdk'</span><br/><br/>
+<span class="c-kw">const</span> iam = <span class="c-kw">new</span> <span class="c-fn">ForgeID</span>({ <span class="c-prop">apiKey</span>: process.env.<span class="c-prop">FORGEID_KEY</span> })<br/><br/>
+<span class="c-comment">// Spawn an AI agent with scoped capabilities</span><br/>
+<span class="c-kw">const</span> agent = <span class="c-kw">await</span> iam.tokens.<span class="c-fn">issueAgent</span>({<br/>
+&nbsp;&nbsp;<span class="c-prop">capabilities</span>: [<span class="c-str">'crm:write'</span>, <span class="c-str">'invoice:read'</span>],<br/>
+&nbsp;&nbsp;<span class="c-prop">maxLifetime</span>: <span class="c-str">'2h'</span>,<br/>
+&nbsp;&nbsp;<span class="c-prop">purpose</span>: <span class="c-str">'nightly reconciliation'</span>,<br/>
+&nbsp;&nbsp;<span class="c-prop">model</span>: <span class="c-str">'claude-sonnet-4-20250514'</span><br/>
+})`
+  },
+  py: {
+    file: 'quickstart.py',
+    html: `<span class="c-comment"># pip install forgeid</span><br/>
+<span class="c-kw">from</span> forgeid <span class="c-kw">import</span> <span class="c-prop">ForgeID</span><br/><br/>
+iam = <span class="c-fn">ForgeID</span>(api_key=os.environ[<span class="c-str">"FORGEID_KEY"</span>])<br/><br/>
+<span class="c-comment"># Spawn an AI agent with scoped capabilities</span><br/>
+agent = iam.tokens.<span class="c-fn">issue_agent</span>(<br/>
+&nbsp;&nbsp;capabilities=[<span class="c-str">"crm:write"</span>, <span class="c-str">"invoice:read"</span>],<br/>
+&nbsp;&nbsp;max_lifetime=<span class="c-str">"2h"</span>,<br/>
+&nbsp;&nbsp;purpose=<span class="c-str">"nightly reconciliation"</span>,<br/>
+&nbsp;&nbsp;model=<span class="c-str">"claude-sonnet-4-20250514"</span><br/>
+)`
+  },
+  curl: {
+    file: 'quickstart.sh',
+    html: `<span class="c-comment"># Spawn an AI agent token</span><br/>
+<span class="c-fn">curl</span> -X POST https://api.forgeid.ai/v1/token \\<br/>
+&nbsp;&nbsp;-H <span class="c-str">"Authorization: Bearer $FORGEID_KEY"</span> \\<br/>
+&nbsp;&nbsp;-H <span class="c-str">"Content-Type: application/json"</span> \\<br/>
+&nbsp;&nbsp;-d <span class="c-str">'{</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-str">"grant_type": "agent_delegation",</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-str">"parent_token": "'$HUMAN_TOKEN'",</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-str">"capabilities": ["crm:write","invoice:read"],</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-str">"max_lifetime_minutes": 120,</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-str">"purpose": "nightly reconciliation"</span><br/>
+&nbsp;&nbsp;<span class="c-str">}'</span>`
+  },
+  cli: {
+    file: 'terminal',
+    html: `<span class="c-comment"># Install ForgeID CLI</span><br/>
+<span class="c-fn">npm</span> i -g @forgeid/cli<br/><br/>
+<span class="c-comment"># Authenticate</span><br/>
+<span class="c-fn">forgeid</span> login<br/><br/>
+<span class="c-comment"># Spawn agent token</span><br/>
+<span class="c-fn">forgeid</span> agents spawn \\<br/>
+&nbsp;&nbsp;--capabilities <span class="c-str">"crm:write,invoice:read"</span> \\<br/>
+&nbsp;&nbsp;--max-lifetime <span class="c-str">2h</span> \\<br/>
+&nbsp;&nbsp;--purpose <span class="c-str">"nightly reconciliation"</span>`
+  }
+};
+
+function switchTab(el, lang) {
+  document.querySelectorAll('.demo-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('demo-code-block').innerHTML = codes[lang].html;
+  document.getElementById('demo-filename').textContent = codes[lang].file;
+}
+
+// ── LIVE TOKEN GENERATOR ──
+function b64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+function ulid() {
+  return 'agent_' + Math.random().toString(36).slice(2,10).toUpperCase() + Date.now().toString(36).toUpperCase();
+}
+
+async function issueToken() {
+  const btn = document.getElementById('demo-btn');
+  const res = document.getElementById('demo-response-content');
+  btn.classList.add('loading');
+  btn.innerHTML = '<span class="spin">⟳</span> Issuing...';
+  res.style.color = 'var(--muted)';
+  res.textContent = 'Generating signed JWT...';
+
+  await new Promise(r => setTimeout(r, 900));
+
+  const now = Math.floor(Date.now()/1000);
+  const agentId = ulid();
+  const jti = 'tok_' + Math.random().toString(36).slice(2,12).toUpperCase();
+
+  const header = { alg: 'RS256', kid: 'key-2026-04', typ: 'JWT' };
+  const payload = {
+    iss: 'https://iam.forgeid.ai',
+    sub: agentId,
+    aud: ['https://api.forgeid.ai'],
+    iat: now, exp: now + 7200, jti,
+    org_id: 'org_INTELLIFORGE',
+    org_slug: 'intelliforge',
+    identity_type: 'agent',
+    agent_type: 'delegated',
+    delegation_chain: [
+      { sub: 'usr_GIRISH01HZ', sess: 'sess_DEMO', auth_method: 'passkey' },
+      { sub: agentId, spawned_at: new Date().toISOString() }
+    ],
+    capabilities: ['crm:write', 'invoice:read'],
+    permissions: ['crm:write', 'invoice:read'],
+    roles: [],
+    model: 'claude-sonnet-4-20250514',
+    agent_run_id: 'run_' + Math.random().toString(36).slice(2,8).toUpperCase(),
+    max_tool_calls: 50,
+    allow_spawn: false,
+    purpose: 'nightly reconciliation'
+  };
+
+  const hStr = b64url(new TextEncoder().encode(JSON.stringify(header)));
+  const pStr = b64url(new TextEncoder().encode(JSON.stringify(payload)));
+  const sigPlaceholder = b64url(new TextEncoder().encode('DEMO_SIG_' + jti));
+  const token = `${hStr}.${pStr}.${sigPlaceholder}`;
+
+  window._lastToken = token;
+  window._lastPayload = payload;
+
+  res.innerHTML = `<span style="color:var(--muted);font-size:11px">access_token: </span><span class="token-val">${token.slice(0,80)}...</span><br/><br/>
+<span style="color:var(--muted);font-size:11px">token_type: </span><span style="color:var(--g);font-size:12px">Bearer</span>&nbsp;&nbsp;
+<span style="color:var(--muted);font-size:11px">expires_in: </span><span style="color:var(--amber);font-size:12px">7200</span>&nbsp;&nbsp;
+<span style="color:var(--muted);font-size:11px">agent_id: </span><span style="color:var(--g2);font-size:12px">${agentId}</span>`;
+
+  btn.classList.remove('loading');
+  btn.innerHTML = '⚡ Issue new token';
+  document.getElementById('demo-copy-hint').textContent = 'Click response to copy · Decode at jwt.io';
+}
+
+function copyToken() {
+  if (!window._lastToken) return;
+  navigator.clipboard.writeText(window._lastToken).then(() => {
+    document.getElementById('demo-copy-hint').textContent = '✓ Copied to clipboard';
+    setTimeout(() => {
+      document.getElementById('demo-copy-hint').textContent = 'Click response to copy · Decode at jwt.io';
+    }, 2000);
+  });
+}
+</script>
+</body>
+</html>
