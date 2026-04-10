@@ -1,8 +1,10 @@
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { eq } from "drizzle-orm";
+import type { Database } from "@forgeid/db";
 import { apiKeys } from "@forgeid/db";
 import { API_KEY_PREFIX, AuthenticationError } from "@forgeid/shared";
-import type { ForgeIdEnv } from "../types.js";
+import type { ApiKeyRow, ForgeIdEnv } from "../types.js";
 import { hashApiKey } from "../services/crypto.js";
 import { authenticateAccessToken } from "../services/token-service.js";
 
@@ -10,6 +12,21 @@ function parseBearer(header: string | undefined): string | null {
   if (!header?.startsWith("Bearer ")) return null;
   const t = header.slice("Bearer ".length).trim();
   return t.length > 0 ? t : null;
+}
+
+function attachApiKeyContext(c: Context<ForgeIdEnv>, db: Database, row: ApiKeyRow): void {
+  if (row.expiresAt && row.expiresAt < new Date()) {
+    throw new AuthenticationError("API key has expired");
+  }
+  c.set("orgId", row.orgId);
+  c.set("apiKeyId", row.id);
+  c.set("apiKey", row);
+  c.set("apiKeyScopes", row.scopes);
+  void db
+    .update(apiKeys)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(apiKeys.id, row.id))
+    .catch(() => {});
 }
 
 export const apiKeyAuth = createMiddleware<ForgeIdEnv>(async (c, next) => {
@@ -23,9 +40,7 @@ export const apiKeyAuth = createMiddleware<ForgeIdEnv>(async (c, next) => {
   if (!row || row.revokedAt) {
     throw new AuthenticationError("Invalid API key");
   }
-  c.set("orgId", row.orgId);
-  c.set("apiKeyId", row.id);
-  c.set("apiKey", row);
+  attachApiKeyContext(c, db, row);
   await next();
 });
 
@@ -64,9 +79,7 @@ export const apiKeyOrTokenAuth = createMiddleware<ForgeIdEnv>(async (c, next) =>
     if (!row || row.revokedAt) {
       throw new AuthenticationError("Invalid API key");
     }
-    c.set("orgId", row.orgId);
-    c.set("apiKeyId", row.id);
-    c.set("apiKey", row);
+    attachApiKeyContext(c, db, row);
     await next();
     return;
   }

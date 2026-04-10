@@ -34,10 +34,13 @@ export const auditRouter = new Hono<ForgeIdEnv>()
       from: q.from,
       to: q.to,
       limit: q.limit,
+      cursor: q.cursor,
     });
     return c.json({
       data: {
         events: rows.map(serializeAudit),
+        cursor: rows.length > 0 ? rows[rows.length - 1].id : null,
+        has_more: rows.length === (q.limit ?? 100),
       },
     });
   })

@@ -1,6 +1,7 @@
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, lte, lt } from "drizzle-orm";
 import type { Database } from "@forgeid/db";
 import { auditEvents } from "@forgeid/db";
+import { dispatchWebhooks } from "./webhook-service.js";
 
 export type AuditRow = typeof auditEvents.$inferSelect;
 type AuditInsert = typeof auditEvents.$inferInsert;
@@ -27,7 +28,10 @@ export async function recordAuditEvent(
   row: Omit<AuditInsert, "createdAt">,
 ): Promise<AuditRow> {
   const [inserted] = await db.insert(auditEvents).values(row).returning();
-  if (inserted) broadcast(inserted);
+  if (inserted) {
+    broadcast(inserted);
+    dispatchWebhooks(db, inserted.orgId, inserted).catch(() => {});
+  }
   return inserted!;
 }
 
@@ -40,6 +44,7 @@ export async function queryAuditEvents(
     from?: string;
     to?: string;
     limit?: number;
+    cursor?: string;
   },
 ): Promise<AuditRow[]> {
   const limit = filters.limit ?? 100;
@@ -48,6 +53,9 @@ export async function queryAuditEvents(
   if (filters.actorId) conditions.push(eq(auditEvents.actorId, filters.actorId));
   if (filters.from) conditions.push(gte(auditEvents.createdAt, new Date(filters.from)));
   if (filters.to) conditions.push(lte(auditEvents.createdAt, new Date(filters.to)));
+  if (filters.cursor) {
+    conditions.push(lt(auditEvents.id, filters.cursor));
+  }
 
   return db
     .select()

@@ -10,6 +10,7 @@ export type ForgeIdVariables = {
   orgSlug?: string;
   apiKeyId?: string;
   apiKey?: ApiKeyRow;
+  apiKeyScopes?: string[];
   tokenClaims?: ForgeIDTokenClaims;
   userId?: string;
 };

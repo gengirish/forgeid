@@ -3,6 +3,7 @@ import type { Database } from "@forgeid/db";
 import {
   agents,
   organizations,
+  roleAssignments,
   roles,
   sessions,
   tokens,
@@ -32,6 +33,7 @@ async function loadUserPermissions(
   db: Database,
   orgId: string,
   userRole: string,
+  userId?: string,
 ): Promise<string[]> {
   if (userRole === "owner") return ["*"];
   const [role] = await db
@@ -39,7 +41,23 @@ async function loadUserPermissions(
     .from(roles)
     .where(and(eq(roles.orgId, orgId), eq(roles.name, userRole)))
     .limit(1);
-  return role?.permissions ?? [];
+  const fromName = role?.permissions ?? [];
+
+  if (!userId) return fromName;
+
+  const assignments = await db
+    .select({ permissions: roles.permissions })
+    .from(roleAssignments)
+    .innerJoin(roles, eq(roleAssignments.roleId, roles.id))
+    .where(
+      and(
+        eq(roleAssignments.orgId, orgId),
+        eq(roleAssignments.principalType, "user"),
+        eq(roleAssignments.principalId, userId),
+      ),
+    );
+  const fromAssignments = assignments.flatMap((a) => a.permissions);
+  return Array.from(new Set([...fromName, ...fromAssignments]));
 }
 
 async function assertTokenRowActive(db: Database, jti: string) {
@@ -64,7 +82,7 @@ export async function issueUserToken(
     .limit(1);
   if (!user) throw new NotFoundError("User not found");
 
-  const permissions = await loadUserPermissions(db, input.orgId, user.role);
+  const permissions = await loadUserPermissions(db, input.orgId, user.role, user.id);
   const accessJti = generateId("jti_");
   const refreshJti = generateId("jti_");
   const accessExp = new Date(Date.now() + accessTtlSec() * 1000);
@@ -289,6 +307,11 @@ export async function refreshToken(
   const orgId = typeof payload.org_id === "string" ? payload.org_id : undefined;
   const sessionId = typeof payload.session_id === "string" ? payload.session_id : undefined;
   const sub = typeof payload.sub === "string" ? payload.sub : undefined;
+  if (sessionId) {
+    const [sess] = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
+    if (!sess) throw new AuthenticationError("Session not found");
+    if (sess.expiresAt.getTime() < Date.now()) throw new AuthenticationError("Session expired");
+  }
   if (!orgId || !sessionId || !sub) throw new AuthenticationError("Invalid refresh token");
 
   await db

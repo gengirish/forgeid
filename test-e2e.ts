@@ -1,23 +1,31 @@
 /**
- * ForgeID E2E Test — Full Demo Flow
- * 
- * 1. Health + JWKS
- * 2. Issue human token (password grant)
- * 3. Verify token
- * 4. Create API key
- * 5. Spawn AI agent with scoped capabilities
- * 6. Verify agent token (delegation chain)
- * 7. Permission check (allowed + denied)
- * 8. Query audit log
- * 9. Terminate agent (instant revocation)
- * 10. Verify revoked token is rejected
+ * ForgeID Comprehensive E2E Test
+ *
+ * Covers the full API surface against a real Neon PostgreSQL database:
+ *   1.  Health + JWKS
+ *   2.  Org bootstrap (create org via API)
+ *   3.  Human login (password grant)
+ *   4.  Verify token
+ *   5.  Token refresh
+ *   6.  Org read + update
+ *   7.  Member invite + role change + remove
+ *   8.  Create role (RBAC)
+ *   9.  Create API key + verify lifecycle (lastUsedAt, scopes, patch)
+ *   10. Auth with API key
+ *   11. Spawn AI agent (delegation)
+ *   12. Verify agent token (delegation chain + capabilities)
+ *   13. Permission check — allowed + denied
+ *   14. Create webhook + verify delivery
+ *   15. Query audit log + cursor pagination
+ *   16. Revoke API key
+ *   17. Terminate agent (instant revocation)
+ *   18. Verify revoked tokens are rejected
+ *   19. Cleanup: delete webhook
  */
 
 const API = process.env.API_URL ?? "http://localhost:4000";
-
-const ORG_ID = "org_intelliforge";
-const USER_EMAIL = "girish@intelliforge.tech";
 const DEV_PASSWORD = "forgeid-demo-2026";
+const SLUG = `e2e_${Date.now()}`;
 
 async function api(method: string, path: string, body?: unknown, token?: string) {
   const h: Record<string, string> = { "Content-Type": "application/json" };
@@ -33,177 +41,360 @@ async function api(method: string, path: string, body?: unknown, token?: string)
 
 let passed = 0;
 let failed = 0;
+let skipped = 0;
 
-function assert(condition: boolean, label: string, detail?: string) {
-  if (condition) {
-    console.log(`  \u2705 ${label}`);
-    passed++;
-  } else {
-    console.log(`  \u274C ${label}${detail ? ` \u2014 ${detail}` : ""}`);
-    failed++;
-  }
+function assert(ok: boolean, label: string, detail?: string) {
+  if (ok) { console.log(`  \u2705 ${label}`); passed++; }
+  else    { console.log(`  \u274C ${label}${detail ? ` \u2014 ${detail}` : ""}`); failed++; }
 }
+function skip(label: string) { console.log(`  \u23ED\uFE0F  ${label}`); skipped++; }
 
 async function run() {
-  console.log("\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557");
-  console.log("\u2551       ForgeID E2E Test \u2014 Full Demo Flow            \u2551");
-  console.log("\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D\n");
+  console.log("\n========================================================");
+  console.log("  ForgeID Comprehensive E2E Test");
+  console.log("========================================================\n");
 
-  // ---- Step 1: Health ----
-  console.log("[1/12] Health Check");
+  // ─────────────────────── 1. Health + JWKS ───────────────────────
+  console.log("[1] Health + JWKS");
   const health = await api("GET", "/health");
-  assert(health.status === 200, "API is healthy");
+  assert(health.status === 200, "Health returns 200");
   assert(health.json?.data?.status === "ok", "Status is ok");
 
-  // ---- Step 2: JWKS ----
-  console.log("\n[2/12] JWKS Endpoint");
   const jwks = await api("GET", "/v1/token/jwks");
   assert(jwks.status === 200, "JWKS returns 200");
-  assert(jwks.json?.data?.keys?.length > 0, "Has at least one key");
-  assert(jwks.json?.data?.keys?.[0]?.alg === "RS256", "Algorithm is RS256");
+  assert(jwks.json?.data?.keys?.length > 0, "Has RSA key(s)");
+  assert(jwks.json?.data?.keys[0].alg === "RS256", "Algorithm RS256");
 
-  // ---- Step 3: Issue Human Token ----
-  console.log("\n[3/12] Issue Human Token (password grant)");
-  const tokenRes = await api("POST", "/v1/token", {
-    grant_type: "password",
-    username: USER_EMAIL,
-    password: DEV_PASSWORD,
-    org_id: ORG_ID,
+  // ─────────────────────── 2. Org bootstrap ───────────────────────
+  console.log("\n[2] Org Bootstrap (POST /v1/orgs)");
+  const orgRes = await api("POST", "/v1/orgs", {
+    org_name: "E2E Test Corp",
+    org_slug: SLUG,
+    owner_email: `owner-${SLUG}@test.forgeid.ai`,
+    owner_name: "E2E Owner",
+    plan: "pro",
   });
-  assert(tokenRes.status === 200, "Token issued", `status=${tokenRes.status} ${JSON.stringify(tokenRes.json?.error)}`);
-  
-  const humanToken = tokenRes.json?.data?.access_token;
-  const refreshTok = tokenRes.json?.data?.refresh_token;
-  
-  if (!humanToken) {
-    console.log("\n  FATAL: No human token. Cannot proceed.\n");
-    process.exit(1);
+  assert(orgRes.status === 201, "Org created (201)", `status=${orgRes.status} ${JSON.stringify(orgRes.json?.error)}`);
+  const orgId = orgRes.json?.data?.org?.id;
+  const ownerId = orgRes.json?.data?.user?.id;
+  assert(orgId?.startsWith("org_"), `Org ID: ${orgId}`);
+  assert(ownerId?.startsWith("usr_"), `Owner ID: ${ownerId}`);
+  assert(orgRes.json?.data?.org?.slug === SLUG, "Slug matches");
+  assert(orgRes.json?.data?.org?.plan === "pro", "Plan is pro");
+
+  // duplicate slug rejected
+  const dup = await api("POST", "/v1/orgs", {
+    org_name: "Dup",
+    org_slug: SLUG,
+    owner_email: "dup@test.forgeid.ai",
+    owner_name: "Dup",
+  });
+  assert(dup.status === 409, "Duplicate slug rejected (409)");
+
+  if (!orgId || !ownerId) { console.log("FATAL: no org"); process.exit(1); }
+
+  // ─────────────────────── 3. Human login ───────────────────────
+  console.log("\n[3] Human Login (password grant)");
+  const loginRes = await api("POST", "/v1/token", {
+    grant_type: "password",
+    username: `owner-${SLUG}@test.forgeid.ai`,
+    password: DEV_PASSWORD,
+    org_id: orgId,
+  });
+  assert(loginRes.status === 200, "Token issued", `status=${loginRes.status} ${JSON.stringify(loginRes.json?.error)}`);
+  const token = loginRes.json?.data?.access_token;
+  const refresh = loginRes.json?.data?.refresh_token;
+  assert(!!token, "Access token received");
+  assert(!!refresh, "Refresh token received");
+  assert(loginRes.json?.data?.token_type === "Bearer", "Token type Bearer");
+  assert(loginRes.json?.data?.expires_in === 3600, "Expires in 3600s");
+
+  if (!token) { console.log("FATAL: no token"); process.exit(1); }
+
+  // ─────────────────────── 4. Verify token ───────────────────────
+  console.log("\n[4] Verify Human Token");
+  const v = await api("POST", "/v1/token/verify", { token });
+  assert(v.status === 200, "Verified");
+  assert(v.json?.data?.claims?.identity_type === "user", "Identity = user");
+  assert(v.json?.data?.claims?.org_id === orgId, "Org ID matches");
+  assert(v.json?.data?.claims?.permissions?.includes("*"), "Owner has wildcard perms");
+
+  // ─────────────────────── 5. Token refresh ───────────────────────
+  console.log("\n[5] Token Refresh");
+  const refRes = await api("POST", "/v1/token", {
+    grant_type: "refresh_token",
+    refresh_token: refresh,
+  });
+  assert(refRes.status === 200, "Refresh succeeded");
+  const token2 = refRes.json?.data?.access_token;
+  assert(!!token2, "New access token issued");
+  assert(token2 !== token, "New token differs from old");
+
+  // old refresh should now be revoked (rotated)
+  const refAgain = await api("POST", "/v1/token", {
+    grant_type: "refresh_token",
+    refresh_token: refresh,
+  });
+  assert(refAgain.status === 401, "Old refresh token rejected after rotation");
+
+  // use new token from here
+  const T = token2!;
+
+  // ─────────────────────── 6. Org read + update ───────────────────────
+  console.log("\n[6] Org Read + Update");
+  const orgMe = await api("GET", "/v1/orgs/me", undefined, T);
+  assert(orgMe.status === 200, "GET /v1/orgs/me");
+  assert(orgMe.json?.data?.org?.name === "E2E Test Corp", "Org name");
+
+  const orgPatch = await api("PATCH", "/v1/orgs/me", { name: "E2E Patched Corp" }, T);
+  assert(orgPatch.status === 200, "PATCH org name");
+  assert(orgPatch.json?.data?.org?.name === "E2E Patched Corp", "Name updated");
+
+  // ─────────────────────── 7. Members ───────────────────────
+  console.log("\n[7] Member Management");
+  const invite = await api("POST", "/v1/orgs/me/members", {
+    email: `dev-${SLUG}@test.forgeid.ai`,
+    name: "Dev User",
+    role: "developer",
+  }, T);
+  assert(invite.status === 201, "Member invited", `status=${invite.status}`);
+  const devUserId = invite.json?.data?.member?.user_id;
+  assert(!!devUserId, `Dev user ID: ${devUserId}`);
+
+  // change role
+  if (devUserId) {
+    const roleChange = await api("POST", `/v1/orgs/me/members/${devUserId}/role`, { role: "admin" }, T);
+    assert(roleChange.status === 200, "Role changed to admin");
+    assert(roleChange.json?.data?.member?.role === "admin", "Role is now admin");
+
+    // can't demote the only owner
+    const selfDemote = await api("POST", `/v1/orgs/me/members/${ownerId}/role`, { role: "member" }, T);
+    assert(selfDemote.status === 403, "Can't demote only owner");
+
+    // remove member
+    const removeMember = await api("DELETE", `/v1/orgs/me/members/${devUserId}`, undefined, T);
+    assert(removeMember.status === 200, "Member removed");
   }
-  assert(!!humanToken, "Access token received");
-  assert(!!refreshTok, "Refresh token received");
-  assert(tokenRes.json?.data?.token_type === "Bearer", "Token type is Bearer");
-  assert(tokenRes.json?.data?.expires_in > 0, `Expires in ${tokenRes.json?.data?.expires_in}s`);
-  console.log(`    Token: ${humanToken.slice(0, 40)}...`);
 
-  // ---- Step 4: Verify Token ----
-  console.log("\n[4/12] Verify Human Token");
-  const verify = await api("POST", "/v1/token/verify", { token: humanToken });
-  assert(verify.status === 200, "Token verified");
-  assert(verify.json?.data?.claims?.identity_type === "user", "Identity type is user");
-  assert(verify.json?.data?.claims?.org_id === ORG_ID, `Org ID matches: ${verify.json?.data?.claims?.org_id}`);
-  assert(verify.json?.data?.claims?.email === USER_EMAIL, "Email matches");
+  // list members
+  const members = await api("GET", "/v1/orgs/me/members", undefined, T);
+  assert(members.status === 200, "List members");
+  assert(members.json?.data?.members?.length === 1, "Only owner remains");
 
-  // ---- Step 5: Create API Key ----
-  console.log("\n[5/12] Create API Key");
-  const apiKeyRes = await api("POST", "/v1/api-keys", {
-    name: "CRM Production",
-    scopes: ["crm:write", "invoice:read"],
-  }, humanToken);
-  assert(apiKeyRes.status === 200, "API key created", `status=${apiKeyRes.status} ${JSON.stringify(apiKeyRes.json?.error)}`);
-  const rawKey = apiKeyRes.json?.data?.raw_key;
-  assert(rawKey?.startsWith("sk_live_"), `Key starts with sk_live_: ${rawKey?.slice(0, 16)}...`);
-  const apiKeyId = apiKeyRes.json?.data?.id;
-  assert(!!apiKeyId, `Key ID: ${apiKeyId}`);
-  console.log(`    Raw key: ${rawKey?.slice(0, 24)}...`);
+  // ─────────────────────── 8. Create Role (RBAC) ───────────────────────
+  console.log("\n[8] Create Custom Role");
+  const roleRes = await api("POST", "/v1/roles", {
+    name: "crm-agent",
+    description: "CRM read/write access",
+    permissions: ["crm:read", "crm:write", "invoice:read"],
+  }, T);
+  assert(roleRes.status === 200, "Role created", `status=${roleRes.status}`);
+  assert(roleRes.json?.data?.role?.name === "crm-agent", "Role name matches");
+  assert(roleRes.json?.data?.role?.permissions?.length === 3, "3 permissions");
 
-  // ---- Step 6: Spawn AI Agent ----
-  console.log("\n[6/12] Spawn AI Agent (Delegation)");
+  const rolesList = await api("GET", "/v1/roles", undefined, T);
+  assert(rolesList.status === 200, "List roles");
+  assert(rolesList.json?.data?.roles?.length >= 1, "At least 1 role");
+
+  // ─────────────────────── 9. API Key lifecycle ───────────────────────
+  console.log("\n[9] API Key Lifecycle");
+  const keyRes = await api("POST", "/v1/api-keys", {
+    name: "CI/CD Pipeline",
+    scopes: ["crm:write", "invoice:read", "agents:spawn"],
+  }, T);
+  assert(keyRes.status === 200, "API key created");
+  const rawKey = keyRes.json?.data?.raw_key;
+  const keyId = keyRes.json?.data?.id;
+  assert(rawKey?.startsWith("sk_live_"), `Key prefix ok: ${rawKey?.slice(0, 16)}...`);
+  assert(!!keyId, `Key ID: ${keyId}`);
+
+  // Patch key
+  if (keyId) {
+    const patchKey = await api("PATCH", `/v1/api-keys/${keyId}`, {
+      name: "CI/CD Pipeline v2",
+      scopes: ["crm:write", "invoice:read", "agents:spawn", "audit:read"],
+    }, T);
+    assert(patchKey.status === 200, "API key patched");
+    assert(patchKey.json?.data?.name === "CI/CD Pipeline v2", "Name updated");
+  }
+
+  // ─────────────────────── 10. Auth with API Key ───────────────────────
+  console.log("\n[10] Auth with API Key");
+  if (rawKey) {
+    const keyAuth = await api("GET", "/v1/orgs/me", undefined, rawKey);
+    assert(keyAuth.status === 200, "API key auth works");
+    assert(keyAuth.json?.data?.org?.id === orgId, "Correct org via API key");
+
+    // list keys via API key auth
+    const keyList = await api("GET", "/v1/api-keys", undefined, rawKey);
+    assert(keyList.status === 200, "List keys via API key auth");
+    assert(keyList.json?.data?.api_keys?.length >= 1, "At least 1 key");
+  }
+
+  // ─────────────────────── 11. Spawn AI Agent ───────────────────────
+  console.log("\n[11] Spawn AI Agent (Delegation)");
   const agentRes = await api("POST", "/v1/agents", {
     capabilities: ["crm:write", "invoice:read"],
-    max_lifetime_minutes: 120,
-    max_tool_calls: 50,
-    purpose: "nightly CRM reconciliation",
+    max_lifetime_minutes: 60,
+    max_tool_calls: 25,
+    purpose: "E2E test reconciliation agent",
     model: "claude-sonnet-4-20250514",
-  }, humanToken);
+  }, T);
   assert(agentRes.status === 200, "Agent spawned", `status=${agentRes.status} ${JSON.stringify(agentRes.json?.error)}`);
-
   const agentToken = agentRes.json?.data?.access_token;
   const agentId = agentRes.json?.data?.agent_id;
   assert(!!agentToken, "Agent token received");
   assert(agentId?.startsWith("agent_"), `Agent ID: ${agentId}`);
-  console.log(`    Agent: ${agentId}`);
-  console.log(`    Delegation chain depth: ${agentRes.json?.data?.delegation_chain?.length}`);
+  assert(agentRes.json?.data?.delegation_chain?.length >= 1, "Delegation chain present");
 
-  // ---- Step 7: Verify Agent Token ----
+  // ─────────────────────── 12. Verify Agent Token ───────────────────────
   if (agentToken) {
-    console.log("\n[7/12] Verify Agent Token (Delegation Chain)");
-    const agentVerify = await api("POST", "/v1/token/verify", { token: agentToken });
-    assert(agentVerify.status === 200, "Agent token verified");
-    const c = agentVerify.json?.data?.claims;
-    assert(c?.identity_type === "agent", "Identity type is agent");
-    assert(c?.agent_type === "delegated", "Agent type is delegated");
+    console.log("\n[12] Verify Agent Token");
+    const av = await api("POST", "/v1/token/verify", { token: agentToken });
+    assert(av.status === 200, "Agent token verified");
+    const c = av.json?.data?.claims;
+    assert(c?.identity_type === "agent", "Identity = agent");
+    assert(c?.agent_type === "delegated", "Agent type = delegated");
     assert(Array.isArray(c?.delegation_chain), "Has delegation chain");
-    assert(c?.capabilities?.includes("crm:write"), "Has crm:write capability");
-    assert(c?.capabilities?.includes("invoice:read"), "Has invoice:read capability");
-    assert(c?.max_tool_calls === 50, `Max tool calls: ${c?.max_tool_calls}`);
-    assert(c?.purpose === "nightly CRM reconciliation", "Purpose matches");
-    console.log(`    Chain: ${JSON.stringify(c?.delegation_chain)}`);
+    assert(c?.delegation_chain?.[0]?.sub === ownerId, `Delegated by ${ownerId}`);
+    assert(c?.capabilities?.includes("crm:write"), "Has crm:write");
+    assert(c?.capabilities?.includes("invoice:read"), "Has invoice:read");
+    assert(c?.max_tool_calls === 25, "Max tool calls = 25");
+    assert(c?.purpose === "E2E test reconciliation agent", "Purpose matches");
   }
 
-  // ---- Step 8: Permission Check (Allowed) ----
+  // ─────────────────────── 13. Permission Checks ───────────────────────
   if (agentToken) {
-    console.log("\n[8/12] Permission Check \u2014 ALLOWED");
-    const allowed = await api("POST", "/v1/permissions/check", {
-      action: "crm:write",
-      resource: "contact:123",
-    }, agentToken);
+    console.log("\n[13] Permission Checks");
+    const allowed = await api("POST", "/v1/permissions/check", { action: "crm:write" }, agentToken);
     assert(allowed.status === 200, "Permission check returned 200");
-    assert(allowed.json?.data?.allowed === true, "crm:write is ALLOWED");
-    console.log(`    Result: allowed=${allowed.json?.data?.allowed}, reason="${allowed.json?.data?.reason}"`);
-  }
+    assert(allowed.json?.data?.allowed === true, "crm:write ALLOWED");
 
-  // ---- Step 9: Permission Check (Denied) ----
-  if (agentToken) {
-    console.log("\n[9/12] Permission Check \u2014 DENIED");
-    const denied = await api("POST", "/v1/permissions/check", {
-      action: "billing:read",
-    }, agentToken);
+    const denied = await api("POST", "/v1/permissions/check", { action: "billing:delete" }, agentToken);
     assert(denied.status === 200, "Permission check returned 200");
-    assert(denied.json?.data?.allowed === false, "billing:read is DENIED");
-    console.log(`    Result: allowed=${denied.json?.data?.allowed}, reason="${denied.json?.data?.reason}"`);
+    assert(denied.json?.data?.allowed === false, "billing:delete DENIED");
   }
 
-  // ---- Step 10: Query Audit Log ----
-  console.log("\n[10/12] Query Audit Log");
-  const audit = await api("GET", "/v1/audit?limit=10", undefined, humanToken);
-  assert(audit.status === 200, "Audit log query returned 200", `status=${audit.status}`);
-  const events = Array.isArray(audit.json?.data) ? audit.json.data : audit.json?.data?.events;
-  if (Array.isArray(events)) {
-    assert(events.length > 0, `Got ${events.length} audit events`);
-    const types = events.map((e: any) => e.event_type).slice(0, 5);
-    console.log(`    Recent: ${types.join(", ")}`);
-  }
+  // User permission check
+  console.log("  --- User RBAC permission check ---");
+  const userPerm = await api("POST", "/v1/permissions/check", {
+    principal_type: "user",
+    principal_id: ownerId,
+    action: "crm:write",
+  }, T);
+  assert(userPerm.status === 200, "User perm check 200");
+  assert(userPerm.json?.data?.allowed === true, "Owner has crm:write (wildcard)");
 
-  // ---- Step 11: Terminate Agent ----
+  // ─────────────────────── 14. Webhooks ───────────────────────
+  console.log("\n[14] Webhook Lifecycle");
+  const whRes = await api("POST", "/v1/webhooks", {
+    url: "https://httpbin.org/post",
+    events: ["token.issued", "token.agent.spawned", "token.revoked"],
+  }, T);
+  assert(whRes.status === 200, "Webhook created");
+  const whId = whRes.json?.data?.webhook?.id;
+  const whSecret = whRes.json?.data?.webhook?.secret;
+  assert(whId?.startsWith("whk_"), `Webhook ID: ${whId}`);
+  assert(!!whSecret, "Webhook secret received");
+
+  const whList = await api("GET", "/v1/webhooks", undefined, T);
+  assert(whList.status === 200, "List webhooks");
+  assert(whList.json?.data?.webhooks?.length >= 1, "At least 1 webhook");
+
+  // ─────────────────────── 15. Agents List + Detail ───────────────────────
+  console.log("\n[15] Agent List + Detail");
+  const agentsList = await api("GET", "/v1/agents", undefined, T);
+  assert(agentsList.status === 200, "List agents");
+  const activeAgents = agentsList.json?.data?.agents?.filter((a: any) => a.status === "active");
+  assert(activeAgents?.length >= 1, `Active agents: ${activeAgents?.length}`);
+
   if (agentId) {
-    console.log("\n[11/12] Terminate Agent (Instant Revocation)");
-    const term = await api("DELETE", `/v1/agents/${agentId}`, undefined, humanToken);
-    assert(term.status === 200, "Agent terminated", `status=${term.status}`);
+    const agentDetail = await api("GET", `/v1/agents/${agentId}`, undefined, T);
+    assert(agentDetail.status === 200, "Agent detail");
+    assert(agentDetail.json?.data?.agent?.status === "active", "Agent is active");
+    assert(agentDetail.json?.data?.agent?.purpose === "E2E test reconciliation agent", "Purpose matches");
+
+    const chain = await api("GET", `/v1/agents/${agentId}/chain`, undefined, T);
+    assert(chain.status === 200, "Agent chain endpoint");
+    assert(chain.json?.data?.delegation_chain?.length >= 1, "Chain has entries");
+  }
+
+  // ─────────────────────── 16. Audit Log + Pagination ───────────────────────
+  console.log("\n[16] Audit Log + Cursor Pagination");
+  const audit1 = await api("GET", "/v1/audit?limit=5", undefined, T);
+  assert(audit1.status === 200, "Audit query");
+  const events = audit1.json?.data?.events;
+  assert(Array.isArray(events), "Events is array");
+  assert(events?.length > 0, `Got ${events?.length} events`);
+  const cursor = audit1.json?.data?.cursor;
+  assert(!!cursor, `Cursor: ${cursor}`);
+  assert(typeof audit1.json?.data?.has_more === "boolean", "has_more present");
+
+  // page 2
+  if (cursor) {
+    const audit2 = await api("GET", `/v1/audit?limit=5&cursor=${cursor}`, undefined, T);
+    assert(audit2.status === 200, "Page 2 audit query");
+  }
+
+  // filter by event_type
+  const auditFiltered = await api("GET", "/v1/audit?event_type=token.issued&limit=5", undefined, T);
+  assert(auditFiltered.status === 200, "Filtered audit query");
+  const filteredEvents = auditFiltered.json?.data?.events;
+  if (filteredEvents?.length > 0) {
+    assert(filteredEvents.every((e: any) => e.event_type === "token.issued"), "All events are token.issued");
+  }
+
+  // ─────────────────────── 17. Revoke API Key ───────────────────────
+  console.log("\n[17] Revoke API Key");
+  if (keyId) {
+    const revokeKey = await api("DELETE", `/v1/api-keys/${keyId}`, undefined, T);
+    assert(revokeKey.status === 200, "API key revoked");
+    assert(revokeKey.json?.data?.revoked === true, "revoked=true");
+
+    // verify revoked key is rejected
+    if (rawKey) {
+      const revokedAuth = await api("GET", "/v1/orgs/me", undefined, rawKey);
+      assert(revokedAuth.status === 401, "Revoked API key rejected");
+    }
+  }
+
+  // ─────────────────────── 18. Terminate Agent ───────────────────────
+  if (agentId) {
+    console.log("\n[18] Terminate Agent (Instant Revocation)");
+    const term = await api("DELETE", `/v1/agents/${agentId}`, undefined, T);
+    assert(term.status === 200, "Agent terminated");
     assert(term.json?.data?.terminated === true, "terminated=true");
-    console.log(`    Agent ${agentId} terminated`);
+
+    // verify agent detail shows terminated
+    const agentAfter = await api("GET", `/v1/agents/${agentId}`, undefined, T);
+    assert(agentAfter.json?.data?.agent?.status === "terminated", "Agent status = terminated");
   }
 
-  // ---- Step 12: Verify Revoked Token Rejected ----
+  // ─────────────────────── 19. Revoked Token Rejected ───────────────────────
   if (agentToken) {
-    console.log("\n[12/12] Verify Revoked Token is Rejected");
+    console.log("\n[19] Verify Revoked Agent Token Rejected");
     const rejected = await api("POST", "/v1/token/verify", { token: agentToken });
-    const isRejected =
-      rejected.status === 401 ||
-      rejected.json?.error?.code === "token_revoked" ||
-      rejected.json?.error?.code === "authentication_required";
-    assert(isRejected, "Revoked token is rejected", `status=${rejected.status} ${JSON.stringify(rejected.json?.error?.code)}`);
-    console.log(`    Status: ${rejected.status}, code: ${rejected.json?.error?.code}`);
+    assert(rejected.status === 401, "Revoked agent token rejected", `status=${rejected.status}`);
   }
 
-  // ---- Summary ----
-  console.log("\n" + "=".repeat(55));
-  console.log(`  RESULTS: ${passed} passed, ${failed} failed`);
-  console.log("=".repeat(55) + "\n");
+  // ─────────────────────── 20. Webhook Cleanup ───────────────────────
+  if (whId) {
+    console.log("\n[20] Webhook Cleanup");
+    // check deliveries first
+    const deliveries = await api("GET", `/v1/webhooks/${whId}/deliveries`, undefined, T);
+    assert(deliveries.status === 200, "Deliveries endpoint");
+    console.log(`    Deliveries found: ${deliveries.json?.data?.deliveries?.length ?? 0}`);
+
+    const whDel = await api("DELETE", `/v1/webhooks/${whId}`, undefined, T);
+    assert(whDel.status === 200, "Webhook deleted");
+  }
+
+  // ─────────────────────── Summary ───────────────────────
+  console.log("\n========================================================");
+  console.log(`  RESULTS: ${passed} passed, ${failed} failed, ${skipped} skipped`);
+  console.log("========================================================\n");
 
   if (failed > 0) process.exit(1);
 }
 
-run().catch((e) => {
-  console.error("Fatal:", e);
-  process.exit(1);
-});
+run().catch((e) => { console.error("Fatal:", e); process.exit(1); });

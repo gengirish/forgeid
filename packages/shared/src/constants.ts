@@ -36,6 +36,7 @@ export const AUDIT_EVENT_TYPES = [
   'token.agent.expired',
   'apikey.created',
   'apikey.revoked',
+  'apikey.updated',
   'apikey.used',
   'authz.check.allowed',
   'authz.check.denied',

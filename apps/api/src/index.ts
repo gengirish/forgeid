@@ -19,7 +19,7 @@ import type { ForgeIdEnv } from "./types.js";
 import { agentsRouter } from "./routes/agents.js";
 import { apiKeysRouter } from "./routes/api-keys.js";
 import { auditRouter } from "./routes/audit.js";
-import { orgsRouter } from "./routes/orgs.js";
+import { orgsPublic, orgsRouter } from "./routes/orgs.js";
 import { permissionsRouter } from "./routes/permissions.js";
 import { tokensRouter } from "./routes/tokens.js";
 import { webhooksRouter } from "./routes/webhooks.js";
@@ -90,6 +90,7 @@ app.use("*", rateLimiter);
 
 app.get("/health", (c) => c.json({ data: { status: "ok" } }));
 
+app.route("/", orgsPublic);
 app.route("/", tokensRouter);
 app.route("/", agentsRouter);
 app.route("/", apiKeysRouter);
