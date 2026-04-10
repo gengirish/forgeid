@@ -20,11 +20,12 @@
   "dependencies": {
     "next": "^15",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "turbo": "^2.3.0"
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
   },
   "engines": {
     "node": ">=20"

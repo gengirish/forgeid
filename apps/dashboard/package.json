@@ -10,7 +10,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@forgeid/shared": "workspace:*",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
     "next": "^15.3.0",

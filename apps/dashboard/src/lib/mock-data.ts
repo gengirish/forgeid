@@ -1,4 +1,4 @@
-import { API_KEY_PREFIX } from "@forgeid/shared";
+const API_KEY_PREFIX = "sk_live_";
 
 export type AgentStatus = "active" | "terminated";
 

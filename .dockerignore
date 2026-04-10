@@ -1,0 +1,16 @@
+node_modules
+.git
+.cursor
+.next
+dist
+*.md
+.env
+.env.*
+.vercel
+apps/dashboard
+apps/mcp-server/dist
+docker
+.github
+forgeid-*.html
+forgeid-*.jsx
+forgeid-*.md

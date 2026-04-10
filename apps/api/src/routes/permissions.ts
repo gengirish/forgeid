@@ -11,8 +11,8 @@ import { generateId } from "../services/crypto.js";
 import { roles } from "@forgeid/db";
 
 const CheckPermissionBody = z.object({
-  principal_type: z.enum(["user", "agent"]),
-  principal_id: z.string().min(1),
+  principal_type: z.enum(["user", "agent"]).optional(),
+  principal_id: z.string().min(1).optional(),
   action: z.string().min(1).max(512),
   resource: z.string().max(2048).optional(),
 });
@@ -23,10 +23,31 @@ export const permissionsRouter = new Hono<ForgeIdEnv>()
     const db = c.get("db");
     const orgId = c.get("orgId")!;
     const body = c.req.valid("json");
+    const claims = c.get("tokenClaims");
+
+    const principalType = body.principal_type
+      ?? (claims?.identity_type === "agent" ? "agent" : "user");
+    const principalId = body.principal_id
+      ?? c.get("userId")
+      ?? (claims?.sub as string | undefined)
+      ?? "";
+
+    if (principalType === "agent" && claims?.capabilities) {
+      const caps = claims.capabilities as string[];
+      const allowed = caps.includes(body.action) || caps.includes("*");
+      const result = {
+        allowed,
+        reason: allowed
+          ? `capability '${body.action}' granted via delegation`
+          : `capability '${body.action}' not in agent scope [${caps.join(", ")}]`,
+      };
+      return c.json({ data: result });
+    }
+
     const result = await checkPermission(db, {
       orgId,
-      principalType: body.principal_type,
-      principalId: body.principal_id,
+      principalType: principalType as "user" | "agent",
+      principalId,
       action: body.action,
       resource: body.resource,
     });

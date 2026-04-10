@@ -1,6 +1,6 @@
 "use client";
 
-import { API_KEY_PREFIX } from "@forgeid/shared";
+const API_KEY_PREFIX = "sk_live_";
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import type { MockApiKey } from "../lib/mock-data";

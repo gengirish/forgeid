@@ -1,5 +1,6 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "next build",
-  "installCommand": "npm install"
+  "installCommand": "npx pnpm install",
+  "framework": null,
+  "outputDirectory": "apps/api",
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
 }

@@ -98,16 +98,16 @@ app.route("/", permissionsRouter);
 app.route("/", auditRouter);
 app.route("/", webhooksRouter);
 
-const port = Number(process.env.PORT ?? 4000);
-
 await initSigningMaterial();
 
-serve(
-  {
-    fetch: app.fetch,
-    port,
-  },
-  (info) => {
-    console.log(`ForgeID API running on port ${info.port}`);
-  },
-);
+const isVercel = process.env.VERCEL === "1";
+
+if (!isVercel) {
+  const port = Number(process.env.PORT ?? 4000);
+  serve(
+    { fetch: app.fetch, port },
+    (info) => { console.log(`ForgeID API running on port ${info.port}`); },
+  );
+}
+
+export default app;
