@@ -1,0 +1,41 @@
+@import url("https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..700;1,400..700&family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400..800&display=swap");
+
+@import "tailwindcss";
+
+:root {
+  --background: #05080e;
+  --surface: #0d1220;
+  --foreground: #dde4ef;
+  --muted: #6b7a96;
+  --accent: #00ffb2;
+  --cyan: #00ccff;
+  --amber: #ffbb44;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-cyan: var(--cyan);
+  --color-accent-amber: var(--amber);
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    "Berkeley Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-mono-brand {
+  font-family: var(--font-mono);
+}

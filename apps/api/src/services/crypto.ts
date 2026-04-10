@@ -31,11 +31,8 @@ export function getSigningMaterial(): SigningMaterial {
 
 export async function getJwks(): Promise<{ keys: Record<string, unknown>[] }> {
   const { publicKey, kid } = getSigningMaterial();
-  const jwk = await exportJWK(publicKey);
-  jwk.kid = kid;
-  jwk.use = "sig";
-  jwk.alg = "RS256";
-  return { keys: [jwk] };
+  const jwk = { ...(await exportJWK(publicKey)), kid, use: "sig" as const, alg: "RS256" as const };
+  return { keys: [jwk as unknown as Record<string, unknown>] };
 }
 
 export async function signJwt(

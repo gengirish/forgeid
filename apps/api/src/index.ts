@@ -1,4 +1,6 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { resolve } from "node:path";
+config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -40,14 +42,14 @@ app.onError((err, c) => {
     );
   }
   if (err instanceof RateLimitError) {
-    return c.json(err.toJSON(), err.statusCode);
+    return c.json(err.toJSON(), err.statusCode as 429);
   }
   if (err instanceof ForgeIDError) {
-    return c.json(err.toJSON(), err.statusCode);
+    return c.json(err.toJSON(), err.statusCode as 400 | 401 | 403 | 404 | 429 | 500);
   }
   console.error(`[${c.get("requestId") ?? "no-req-id"}]`, err);
   const internal = new InternalError();
-  return c.json(internal.toJSON(), internal.statusCode);
+  return c.json(internal.toJSON(), 500);
 });
 
 app.use("*", async (c, next) => {

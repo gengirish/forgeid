@@ -17,13 +17,7 @@ import {
   type ForgeIDTokenClaims,
 } from "@forgeid/shared";
 import { recordAuditEvent } from "./audit-service.js";
-import {
-  generateId,
-  getSigningMaterial,
-  hashApiKey,
-  signJwt,
-  verifyJwt,
-} from "./crypto.js";
+import { generateId, getSigningMaterial, signJwt, verifyJwt } from "./crypto.js";
 
 const issuer = () => process.env.FORGEID_JWT_ISSUER ?? "https://forgeid.ai";
 const audience = () => process.env.FORGEID_JWT_AUDIENCE ?? "forgeid-api";
@@ -233,6 +227,9 @@ export async function authenticateAccessToken(
 export async function verifyToken(db: Database, token: string): Promise<ForgeIDTokenClaims> {
   const claims = await authenticateAccessToken(db, token);
   const jti = claims.jti;
+  if (!claims.org_id) {
+    throw new AuthenticationError("Invalid token");
+  }
 
   await recordAuditEvent(db, {
     id: generateId(ID_PREFIXES.event),
@@ -451,5 +448,3 @@ export async function verifyParentAccessToken(
   if (use !== "access") throw new AuthenticationError("A parent access token is required");
   return claims;
 }
-
-export { hashApiKey };

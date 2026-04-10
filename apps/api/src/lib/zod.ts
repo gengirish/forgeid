@@ -1,4 +1,4 @@
-import type { Context, Env } from "hono";
+import type { Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import type { ZodSchema } from "zod";
 import { ZodError } from "zod";
@@ -19,9 +19,7 @@ export function jsonValidationError(c: Context, message: string) {
   );
 }
 
-export function zodValidatorJson<T extends ZodSchema, E extends Env>(
-  schema: T,
-): ReturnType<typeof zValidator<"json", T, E>> {
+export function zodValidatorJson<T extends ZodSchema>(schema: T) {
   return zValidator("json", schema, (result, c) => {
     if (!result.success) {
       const msg =
@@ -34,9 +32,7 @@ export function zodValidatorJson<T extends ZodSchema, E extends Env>(
   });
 }
 
-export function zodValidatorQuery<T extends ZodSchema, E extends Env>(
-  schema: T,
-): ReturnType<typeof zValidator<"query", T, E>> {
+export function zodValidatorQuery<T extends ZodSchema>(schema: T) {
   return zValidator("query", schema, (result, c) => {
     if (!result.success) {
       const msg =
