@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "../lib/utils";
+import { Badge } from "./ui/badge";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -25,6 +27,7 @@ const nav = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-white/10 bg-surface/90 backdrop-blur-md">
@@ -64,13 +67,20 @@ export function Sidebar() {
       </nav>
       <div className="border-t border-white/10 p-3">
         <div className="rounded-lg border border-white/10 bg-background/60 px-3 py-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-            Organization
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+              Organization
+            </p>
+            {user?.orgPlan ? (
+              <Badge variant="info" className="shrink-0 text-[10px] uppercase tracking-wide">
+                {user.orgPlan}
+              </Badge>
+            ) : null}
+          </div>
           <p className="mt-0.5 truncate text-sm font-medium text-foreground">
-            Acme AI Labs
+            {user?.orgName ?? "—"}
           </p>
-          <p className="truncate text-xs text-muted">org_acme_production</p>
+          <p className="truncate font-mono-brand text-xs text-muted">{user?.orgSlug ?? "—"}</p>
         </div>
       </div>
     </aside>

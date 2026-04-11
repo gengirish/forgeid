@@ -1,3 +1,8 @@
+"use client";
+
+import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Header } from "../../components/header";
 import { Sidebar } from "../../components/sidebar";
 
@@ -6,6 +11,23 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { token, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !token) router.replace("/login");
+  }, [loading, token, router]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-accent animate-pulse font-heading text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!token) return null;
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />

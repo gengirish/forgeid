@@ -1,12 +1,32 @@
 "use client";
 
 import { Bell, ChevronDown, Search } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
+  }
+  if (parts.length === 1 && parts[0]!.length >= 2) {
+    return parts[0]!.slice(0, 2).toUpperCase();
+  }
+  if (parts.length === 1) {
+    return parts[0]!.slice(0, 1).toUpperCase();
+  }
+  return "?";
+}
+
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const initials = useMemo(
+    () => (user?.name ? initialsFromName(user.name) : "?"),
+    [user?.name],
+  );
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-4 border-b border-white/10 bg-background/80 px-4 backdrop-blur-md lg:px-6">
@@ -45,11 +65,11 @@ export function Header() {
             aria-haspopup="menu"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent/15 text-xs font-semibold text-accent">
-              JD
+              {initials}
             </span>
             <span className="hidden text-left text-sm sm:block">
-              <span className="block font-medium text-foreground">Jordan Dev</span>
-              <span className="block text-xs text-muted">jordan@acme.ai</span>
+              <span className="block font-medium text-foreground">{user?.name ?? "—"}</span>
+              <span className="block text-xs text-muted">{user?.email ?? ""}</span>
             </span>
             <ChevronDown className="hidden h-4 w-4 text-muted sm:block" />
           </Button>
@@ -70,7 +90,10 @@ export function Header() {
                 type="button"
                 role="menuitem"
                 className="block w-full px-3 py-2 text-left text-sm text-foreground hover:bg-white/5"
-                onClick={() => setMenuOpen(false)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  logout();
+                }}
               >
                 Sign out
               </button>
