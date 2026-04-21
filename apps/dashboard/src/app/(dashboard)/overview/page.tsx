@@ -9,12 +9,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Badge } from "../../components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { StatCard } from "../../components/ui/stat-card";
+import { Badge } from "../../../components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { StatCard } from "../../../components/ui/stat-card";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
-import { cn } from "../../lib/utils";
+import { cn } from "../../../lib/utils";
 
 function formatInt(n: number) {
   return new Intl.NumberFormat("en-US", { notation: "compact" }).format(n);

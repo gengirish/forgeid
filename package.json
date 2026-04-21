@@ -2,9 +2,6 @@
   "name": "forgeid",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
     "dev:api": "pnpm --filter @forgeid/api dev",
     "dev:dashboard": "pnpm --filter @forgeid/dashboard dev",
     "dev:mcp": "pnpm --filter @forgeid/mcp-server dev",
@@ -14,13 +11,11 @@
     "db:push": "pnpm --filter @forgeid/db push",
     "db:migrate": "pnpm --filter @forgeid/db migrate",
     "db:studio": "pnpm --filter @forgeid/db studio",
+    "test:e2e": "tsx test-e2e.ts",
     "lint": "pnpm run --recursive lint",
     "typecheck": "pnpm run --recursive typecheck"
   },
   "dependencies": {
-    "next": "^15",
-    "react": "^19",
-    "react-dom": "^19",
     "tsx": "^4.21.0"
   },
   "devDependencies": {

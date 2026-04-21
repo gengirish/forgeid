@@ -106,8 +106,8 @@ const isVercel = process.env.VERCEL === "1";
 if (!isVercel) {
   const port = Number(process.env.PORT ?? 4000);
   serve(
-    { fetch: app.fetch, port },
-    (info) => { console.log(`ForgeID API running on port ${info.port}`); },
+    { fetch: app.fetch, port, hostname: "0.0.0.0" },
+    (info) => { console.log(`ForgeID API running on ${info.address}:${info.port}`); },
   );
 }
 

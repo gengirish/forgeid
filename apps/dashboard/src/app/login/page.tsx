@@ -182,7 +182,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-muted/60 mt-6">
-          ForgeID v0.1 — Demo environment
+          <a href="https://forgeid.ai" className="hover:text-muted transition-colors">ForgeID</a> · forgeid.ai
         </p>
       </div>
     </div>

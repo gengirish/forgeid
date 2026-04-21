@@ -1,0 +1,112 @@
+.landing-root {
+  cursor: default;
+  overflow-x: hidden;
+}
+
+/* Noise texture overlay */
+.landing-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* Grid background */
+.landing-grid-bg {
+  position: fixed;
+  inset: 0;
+  background-image: linear-gradient(
+      rgba(0, 255, 178, 0.018) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(0, 255, 178, 0.018) 1px, transparent 1px);
+  background-size: 80px 80px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Hero glow */
+.landing-hero-glow::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 400px;
+  background: radial-gradient(
+    ellipse,
+    rgba(0, 255, 178, 0.07) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+/* CTA section glow */
+.landing-cta-glow::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 300px;
+  background: radial-gradient(
+    ellipse,
+    rgba(0, 255, 178, 0.07) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+/* Flow step connector line */
+.landing-flow-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 40px;
+  width: 1px;
+  height: calc(100% - 8px);
+  background: linear-gradient(rgba(255, 255, 255, 0.07), transparent);
+}
+
+/* Blink animation */
+@keyframes landing-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.landing-blink {
+  animation: landing-blink 2s ease-in-out infinite;
+}
+
+/* Spin animation */
+@keyframes landing-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.landing-spin {
+  display: inline-block;
+  animation: landing-spin 0.8s linear infinite;
+}
+
+/* Divider gradient */
+.landing-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.07),
+    transparent
+  );
+}

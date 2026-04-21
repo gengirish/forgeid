@@ -23,7 +23,7 @@
  *   19. Cleanup: delete webhook
  */
 
-const API = process.env.API_URL ?? "http://localhost:4000";
+const API = process.env.API_URL ?? "https://api.forgeid.ai";
 const DEV_PASSWORD = "forgeid-demo-2026";
 const SLUG = `e2e_${Date.now()}`;
 

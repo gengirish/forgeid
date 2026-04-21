@@ -16,7 +16,7 @@ import { cn } from "../lib/utils";
 import { Badge } from "./ui/badge";
 
 const nav = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/api-keys", label: "API Keys", icon: KeyRound },
   { href: "/roles", label: "Roles", icon: Shield },
@@ -45,9 +45,7 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col gap-0.5 p-3" aria-label="Main">
         {nav.map(({ href, label, icon: Icon }) => {
           const active =
-            href === "/"
-              ? pathname === "/"
-              : pathname === href || pathname.startsWith(`${href}/`);
+            pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={href}

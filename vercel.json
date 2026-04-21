@@ -1,6 +1,0 @@
-{
-  "installCommand": "npx pnpm install",
-  "framework": null,
-  "outputDirectory": "apps/api",
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
-}
